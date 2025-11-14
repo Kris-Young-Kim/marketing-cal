@@ -144,13 +144,23 @@ export default function BreakEvenPage() {
 
       results.forEach((result, index) => {
         if (result.status === 'fulfilled' && result.value.success) {
+          // 타입 가드: success가 true일 때만 해당 필드에 접근
+          const product = result.value as {
+            success: true;
+            productName: string;
+            fixedCost: number;
+            variableCost: number;
+            sellingPrice: number;
+            breakEvenQuantity: number;
+            contributionMargin: number;
+          };
           successfulProducts.push({
-            productName: result.value.productName,
-            fixedCost: result.value.fixedCost,
-            variableCost: result.value.variableCost,
-            sellingPrice: result.value.sellingPrice,
-            breakEvenQuantity: result.value.breakEvenQuantity,
-            contributionMargin: result.value.contributionMargin,
+            productName: product.productName,
+            fixedCost: product.fixedCost,
+            variableCost: product.variableCost,
+            sellingPrice: product.sellingPrice,
+            breakEvenQuantity: product.breakEvenQuantity,
+            contributionMargin: product.contributionMargin,
           });
         } else {
           failedProducts.push(productNames[index]);
