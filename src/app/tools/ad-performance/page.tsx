@@ -33,6 +33,7 @@ export default function AdPerformancePage() {
   const [highestProfitId, setHighestProfitId] = useState<string | null>(null);
   const [isCalculated, setIsCalculated] = useState(false);
   const [loadingAI, setLoadingAI] = useState<Map<string, boolean>>(new Map());
+  const [loadingAllAI, setLoadingAllAI] = useState<boolean>(false);
 
   // 행 추가
   const addRow = () => {
@@ -107,7 +108,7 @@ export default function AdPerformancePage() {
     console.log('가장 높은 순이익 상품:', maxProfitId, '순이익:', maxProfit);
   };
 
-  // AI로 상품 정보 추정
+  // AI로 상품 정보 추정 (단일)
   const estimateProductInfo = async (id: string) => {
     const row = rows.find((r) => r.id === id);
     if (!row || !row.productName.trim()) {
@@ -158,6 +159,95 @@ export default function AdPerformancePage() {
       const newLoading = new Map(loadingAI);
       newLoading.set(id, false);
       setLoadingAI(newLoading);
+    }
+  };
+
+  // 전체 상품 AI 분석
+  const estimateAllProducts = async () => {
+    // 상품명이 입력된 행들만 필터링
+    const rowsWithProductName = rows.filter((row) => row.productName.trim());
+    
+    if (rowsWithProductName.length === 0) {
+      alert('분석할 상품명이 없습니다. 상품명을 입력해주세요.');
+      return;
+    }
+
+    setLoadingAllAI(true);
+    console.log('전체 AI 분석 시작:', rowsWithProductName.length, '개 상품');
+
+    // 모든 행에 로딩 상태 설정
+    const newLoading = new Map<string, boolean>();
+    rowsWithProductName.forEach((row) => {
+      newLoading.set(row.id, true);
+    });
+    setLoadingAI(newLoading);
+
+    try {
+      // 모든 상품을 병렬로 분석
+      const promises = rowsWithProductName.map(async (row) => {
+        try {
+          const response = await fetch('/api/estimate-product', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ productName: row.productName }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            const errorMessage = result.error || '상품 정보 추정에 실패했습니다.';
+            const errorDetails = result.details ? `\n상세: ${result.details}` : '';
+            const errorHint = result.hint ? `\n힌트: ${result.hint}` : '';
+            throw new Error(`${row.productName}: ${errorMessage}${errorDetails}${errorHint}`);
+          }
+
+          if (result.success && result.data) {
+            updateRow(row.id, 'price', result.data.price);
+            updateRow(row.id, 'profitPerUnit', result.data.profitPerUnit);
+            updateRow(row.id, 'adCost', result.data.adCost);
+            updateRow(row.id, 'conversions', result.data.conversions);
+            console.log(`${row.productName} AI 분석 완료:`, result.data);
+            return { success: true, productName: row.productName };
+          }
+          return { success: false, productName: row.productName, error: '응답 데이터가 없습니다.' };
+        } catch (error: any) {
+          console.error(`${row.productName} AI 분석 오류:`, error);
+          return { success: false, productName: row.productName, error: error.message };
+        }
+      });
+
+      const results = await Promise.allSettled(promises);
+      
+      // 성공/실패 결과 정리
+      const successCount = results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
+      const failedProducts: string[] = [];
+      
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled' && !result.value.success) {
+          failedProducts.push(result.value.productName);
+        } else if (result.status === 'rejected') {
+          failedProducts.push(rowsWithProductName[index].productName);
+        }
+      });
+
+      // 결과 메시지 표시
+      if (failedProducts.length === 0) {
+        alert(`✅ 전체 ${successCount}개 상품 분석이 완료되었습니다!`);
+      } else {
+        alert(`⚠️ ${successCount}개 상품 분석 완료, ${failedProducts.length}개 실패\n\n실패한 상품: ${failedProducts.join(', ')}`);
+      }
+
+      console.log('전체 AI 분석 완료:', { successCount, failedProducts });
+    } catch (error: any) {
+      console.error('전체 AI 분석 오류:', error);
+      alert('전체 분석 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
+    } finally {
+      // 모든 로딩 상태 해제
+      const finalLoading = new Map<string, boolean>();
+      setLoadingAI(finalLoading);
+      setLoadingAllAI(false);
     }
   };
 
@@ -296,6 +386,23 @@ export default function AdPerformancePage() {
               className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md"
             >
               + 행 추가
+            </button>
+            <button
+              onClick={estimateAllProducts}
+              disabled={loadingAllAI}
+              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {loadingAllAI ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  <span>전체 AI 분석 중...</span>
+                </>
+              ) : (
+                <>
+                  <span>🤖</span>
+                  <span>전체 AI 분석</span>
+                </>
+              )}
             </button>
             <button
               onClick={calculate}

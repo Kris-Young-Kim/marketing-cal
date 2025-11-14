@@ -26,10 +26,17 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       console.error('GEMINI_API_KEY가 설정되지 않았습니다.');
+      console.error('환경변수 확인:', {
+        GEMINI_API_KEY: process.env.GEMINI_API_KEY ? '설정됨' : '없음',
+        NEXT_PUBLIC_GEMINI_API_KEY: process.env.NEXT_PUBLIC_GEMINI_API_KEY ? '설정됨' : '없음',
+        VERCEL: process.env.VERCEL ? 'Vercel 환경' : '로컬 환경',
+      });
       return NextResponse.json(
         { 
           error: 'API 키가 설정되지 않았습니다.',
-          hint: '.env.local 파일에 GEMINI_API_KEY를 설정하고 서버를 재시작하세요.'
+          hint: process.env.VERCEL 
+            ? 'Vercel 대시보드 > 프로젝트 설정 > Environment Variables에서 GEMINI_API_KEY를 추가하고 재배포하세요.'
+            : '.env.local 파일에 GEMINI_API_KEY를 설정하고 서버를 재시작하세요.'
         },
         { status: 500 }
       );
