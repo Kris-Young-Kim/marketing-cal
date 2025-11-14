@@ -127,11 +127,19 @@ export default function LTVCalculatorPage() {
 
       results.forEach((result, index) => {
         if (result.status === 'fulfilled' && result.value.success) {
+          // 타입 가드: success가 true일 때만 해당 필드에 접근
+          const product = result.value as {
+            success: true;
+            productName: string;
+            orderValue: number;
+            purchaseFrequency: number;
+            ltv: number;
+          };
           successfulProducts.push({
-            productName: result.value.productName,
-            orderValue: result.value.orderValue,
-            purchaseFrequency: result.value.purchaseFrequency,
-            ltv: result.value.ltv,
+            productName: product.productName,
+            orderValue: product.orderValue,
+            purchaseFrequency: product.purchaseFrequency,
+            ltv: product.ltv,
           });
         } else {
           failedProducts.push(productNames[index]);

@@ -136,11 +136,19 @@ export default function TargetCPAPage() {
 
       results.forEach((result, index) => {
         if (result.status === 'fulfilled' && result.value.success) {
+          // 타입 가드: success가 true일 때만 해당 필드에 접근
+          const product = result.value as {
+            success: true;
+            productName: string;
+            sellingPrice: number;
+            cost: number;
+            targetCPA: number;
+          };
           successfulProducts.push({
-            productName: result.value.productName,
-            sellingPrice: result.value.sellingPrice,
-            cost: result.value.cost,
-            targetCPA: result.value.targetCPA,
+            productName: product.productName,
+            sellingPrice: product.sellingPrice,
+            cost: product.cost,
+            targetCPA: product.targetCPA,
           });
         } else {
           failedProducts.push(productNames[index]);

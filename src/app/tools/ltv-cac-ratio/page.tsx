@@ -202,13 +202,23 @@ export default function LTVCACRatioPage() {
 
       results.forEach((result, index) => {
         if (result.status === 'fulfilled' && result.value.success) {
+          // 타입 가드: success가 true일 때만 해당 필드에 접근
+          const product = result.value as {
+            success: true;
+            productName: string;
+            ltv: number;
+            cac: number;
+            ratio: number;
+            healthStatus: string;
+            healthColor: string;
+          };
           successfulProducts.push({
-            productName: result.value.productName,
-            ltv: result.value.ltv,
-            cac: result.value.cac,
-            ratio: result.value.ratio,
-            healthStatus: result.value.healthStatus,
-            healthColor: result.value.healthColor,
+            productName: product.productName,
+            ltv: product.ltv,
+            cac: product.cac,
+            ratio: product.ratio,
+            healthStatus: product.healthStatus,
+            healthColor: product.healthColor,
           });
         } else {
           failedProducts.push(productNames[index]);
